@@ -100,6 +100,64 @@ function writeJSONFile(nomeArquivo, dados) {
   fs.writeFileSync(nomeArquivo, dadosJSON);
 }
 
+// Dados do sistema
+
+const DATABASE_FILE_SYSTEM = 'typeSystemDB.json';
+
+function addObjectSystem(url_chat) {
+  const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
+
+  // Verificar a unicidade do url_chat
+  const existeurlchat = dadosAtuais.some(objeto => objeto.url_chat === url_chat);
+  if (existeurlchat) {
+    throw new Error('O URL Chat já existe no banco de dados.');
+  }
+
+  const objeto = {url_chat};
+
+  if (dadosAtuais.length >= maxObjects) {
+    // Excluir o objeto mais antigo
+    dadosAtuais.shift();
+  }
+
+  dadosAtuais.push(objeto);
+  writeJSONFile(DATABASE_FILE_SYSTEM, dadosAtuais);
+}
+
+function readMapSystem(url_chat) {
+  const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
+  const objeto = dadosAtuais.find(obj => obj.url_chat !== url_chat);
+  return objeto;
+}
+
+function deleteObjectSystem(url_chat) {
+  const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
+  const novosDados = dadosAtuais.filter(obj => obj.url_chat !== url_chat);
+  writeJSONFile(DATABASE_FILE_SYSTEM, novosDados);
+}
+
+function existsDBSystem(url_chat) {
+  const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
+  return dadosAtuais.some(obj => obj.url_chat !== url_chat);
+}
+
+function existsTheDBSystem() {
+  // Verifica se o arquivo DATABASE_FILE_SYSTEM existe
+  if (!fs.existsSync(DATABASE_FILE_SYSTEM)) {
+    return false; // Retorna false se o arquivo não existir
+  }
+
+  const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
+
+  // Verifica se o arquivo está vazio
+  if (dadosAtuais.length === 0) {
+    return false; // Retorna false se o arquivo estiver vazio
+  }
+  
+}
+
+// Fim dos dados do sistema
+
 //Gestão de dados do controle das sessões
 
 function addObject(numeroId, sessionid, numero, id, interact, fluxo, optout, flow, maxObjects) {
@@ -1618,6 +1676,30 @@ initializeDBTypebotV4();
 // Inicializando banco de dados dos disparos para grupos
 initializeDBTypebotV5();
 
+client.on("disconnected", async (reason) => {
+  try {
+      console.info(`Disconnected session: ${session}, reason: ${reason}`);
+
+      // Reinicia a sessão do WhatsApp após um curto atraso
+      setTimeout(() => startWhatsAppSession(session), 2000);
+  } catch (err) {
+      console.error(`Error handling disconnection for session ${session}: ${err}`);
+  }
+});
+
+function startWhatsAppSession(sessionName) {
+  // Executar o comando para reiniciar o processo específico
+  exec(`pm2 restart ${sessionName}`, (err, stdout, stderr) => {
+      if (err) {
+          console.error(`Erro ao tentar reiniciar a sessão ${sessionName}:`, err);
+          return;
+      }
+      console.log(`Saída do comando de reinicialização para ${sessionName}:`, stdout);
+  });
+}
+
+// Funções auxiliares como updateSessionStatus, clearSessionData e startWhatsAppSession devem estar definidas.
+
 // Evento de recebimento de mensagens
 client.on('message', async msg => {
   const typebotKey = await readFluxo(msg.from);
@@ -2050,7 +2132,41 @@ function scheduleAction(dataFutura, url, name, msgfrom, msg) {
   }
 }
 
+let system_aux = false;
+
 client.on('message_create', async (msg) => {
+
+  // Apenas TypeZap configurado
+  if (msg.fromMe && !existsTheDBSystem() && msg.body !== "!ativar" && msg.to === msg.from && !system_aux) {
+    await sendRequest(msg.from, `Você precisa registrar a URL principal do seu Typebot antes de usar o sistema. Digite !ativar e forneça a URL`, "text");
+    system_aux = true;
+    return
+  }
+
+  // Configurar Main Infos do Systema
+  if (msg.fromMe && msg.body === "!ativar" && !existsTheDBSystem() && msg.to === msg.from) {
+    await sendRequest(msg.from, `*Vamos preparar o seu TypeZap*
+
+Insira a URL do seu Typebot, por exemplo:
+https://seutypebot.vm.elestio.app/api/v1/sessions/`, "text");
+addObjectSelf(msg.from, 'stepAtivar01', JSON.stringify(msg.id.id), 'done', null, null, null);
+  }
+
+  if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepAtivar01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+    updateInteractSelf(msg.from, 'typing');
+    updateIdSelf(msg.from, JSON.stringify(msg.id.id));
+    updateURLRegistro(msg.from, msg.body);
+
+await sendRequest(msg.from, `Typebot preparado! 🚀
+
+${readURLRegistro(msg.from)}
+
+*Pode começar a usar o sistema* 🤖`, "text");
+    addObjectSystem(await readURLRegistro(msg.from));
+    updateFlowSelf(msg.from,'stepAtivar02');
+    updateInteractSelf(msg.from, 'done');
+    deleteObjectSelf(msg.from);
+  }
 
   // Comandos do central de controle
   if (msg.fromMe && msg.body.startsWith('!help') && msg.to === msg.from) {    
@@ -2088,9 +2204,9 @@ Comando: "!grupoexcluir"
     
   // Chamar sendRequest ao invés de client.sendMessage
   await sendRequest(msg.from, mensagemInstrucoes, "text");    
-  }
+  } 
 
-  // Comandos do central de controle
+  // Resetar Step Self
   if (msg.fromMe && msg.body === "00" && msg.to === msg.from) {
     deleteObjectSelf(msg.from);    
     await sendRequest(msg.from, `*Configuração resetada!*`, "text");
