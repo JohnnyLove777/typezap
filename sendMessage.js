@@ -16,15 +16,15 @@ app.use(express.static('.'));
 app.use(bodyParser.json());
 
 // Configurações para o primeiro cliente (Windows)
-/*const client = new Client({
+const client = new Client({
     authStrategy: new LocalAuth({ clientId: sessao }),
     puppeteer: {
       executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
     }
-  });*/
+  });
   
   //Kit com os comandos otimizados para nuvem Ubuntu Linux (créditos Pedrinho da Nasa Comunidade ZDG)
-  const client = new Client({
+  /*const client = new Client({
     authStrategy: new LocalAuth({ clientId: sessao }),
     puppeteer: {
       headless: true,
@@ -48,7 +48,7 @@ app.use(bodyParser.json());
         '--disable-gpu'
       ]
     }
-  });
+  });*/
   
 // entao habilitamos o usuario a acessar o serviço de leitura do qr code
 client.on('qr', qr => {
@@ -109,7 +109,7 @@ app.post('/sendMessage', async (req, res) => {
                 return res.status(400).json({ status: 'falha', mensagem: 'Tipo de mensagem inválido' });
         }
 
-        res.status(200).json({ status: 'sucesso', mensagem: 'Mensagem enviada com sucesso', msg });
+        res.status(200).json({ status: 'sucesso', mensagem: 'Mensagem enviada com sucesso'});
     } catch (error) {
         console.error(error);        
         res.status(500).json({ status: 'falha', mensagem: 'Erro ao enviar mensagem' });
