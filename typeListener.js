@@ -299,15 +299,10 @@ function initializeDB() {
       // Se não existir, inicializa com os dados de typebotConfigs
       const typebotConfigs = {
           typebot1: {
-              url_registro: 'https://typejack-u7183.vm.elestio.app/api/v1/typebots/funil-base-f8uqcdj/startChat',      
-              gatilho: "ATIVAR FUNIL BASICO",
-              name: "funilbasico"
-          }/*,
-          typebot2: {
-              url_registro: 'https://typejack-u7183.vm.elestio.app/api/v1/typebots/outro-funil-sb644my/startChat',      
-              gatilho: "OUTRO FUNIL BASICO",
-              name: "outrofunil"
-          }*/
+              url_registro: 'https://seutypebot/api/v1/typebots/funil-base-f8uqcdj/startChat',      
+              gatilho: "gatilho do seu fluxo",
+              name: "nomedofluxo"
+          }
       };
 
       const db = {};
