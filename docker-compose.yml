@@ -20,7 +20,7 @@ services:
       - DATABASE_URL=postgresql://postgres:typebot@typebot-db:5432/typebot
       - NEXTAUTH_URL=http://<seu ip aqui>:3001
       - NEXT_PUBLIC_VIEWER_URL=http://<seu ip aqui>:3002
-      - ENCRYPTION_SECRET=9bd08a339fb03237e02cb5ce0f430675
+      - ENCRYPTION_SECRET=875c916244442f7d89a8f376d9d33cac
       - ADMIN_EMAIL=email@gmail.com
       - SMTP_HOST=smtp.gmail.com
       - SMTP_USERNAME=email@gmail.com
@@ -40,7 +40,7 @@ services:
       - DATABASE_URL=postgresql://postgres:typebot@typebot-db:5432/typebot
       - NEXT_PUBLIC_VIEWER_URL=http://<seu ip aqui>:3002
       - NEXTAUTH_URL=http://<seu ip aqui>:3001
-      - ENCRYPTION_SECRET=43453584477818980fcf39a674ec248aaf46baa8014478ec7f7e09a8fedfd86d
+      - ENCRYPTION_SECRET=875c916244442f7d89a8f376d9d33cac
       - S3_ACCESS_KEY=minio
       - S3_SECRET_KEY=minio123
       - S3_BUCKET=typebot
