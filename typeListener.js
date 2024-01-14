@@ -29,10 +29,9 @@ let restartAPI = false;
 
 const DATABASE_FILE = "typesessaodb.json"
 const sessao = "typeListener";
-const url_chat = 'https://typejack-u7183.vm.elestio.app/api/v1/sessions/'; // URL principal do Typebot
-//arquivo .env: url_chat=https://typejack-u7183.vm.elestio.app/api/v1/sessions/
-//const url_chat = process.env.url_chat; // URL principal do Typebot
 const init_delay = 60000; // Exponential Backoff delay
+
+const delay = ms => new Promise(res => setTimeout(res, ms));
 
 console.log("Bem-vindo ao TypeZap 1.0 - A Integração mais completa Typebot + Whatsapp!");
 console.log(`Nome da sessão: ${sessao}`);
@@ -113,12 +112,7 @@ function addObjectSystem(url_chat) {
     throw new Error('O URL Chat já existe no banco de dados.');
   }
 
-  const objeto = {url_chat};
-
-  if (dadosAtuais.length >= maxObjects) {
-    // Excluir o objeto mais antigo
-    dadosAtuais.shift();
-  }
+  const objeto = {url_chat};  
 
   dadosAtuais.push(objeto);
   writeJSONFile(DATABASE_FILE_SYSTEM, dadosAtuais);
@@ -128,6 +122,19 @@ function readMapSystem(url_chat) {
   const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
   const objeto = dadosAtuais.find(obj => obj.url_chat !== url_chat);
   return objeto;
+}
+
+function readURL(indice) {
+  const dadosAtuais = readJSONFile(DATABASE_FILE_SYSTEM);
+
+  // Verifica se o índice é válido
+  if (indice < 0 || indice >= dadosAtuais.length) {
+      console.error('Índice inválido.');
+      return null;
+  }
+
+  // Retorna a URL correspondente ao índice fornecido
+  return dadosAtuais[indice].url_chat;
 }
 
 function deleteObjectSystem(url_chat) {
@@ -154,6 +161,7 @@ function existsTheDBSystem() {
     return false; // Retorna false se o arquivo estiver vazio
   }
   
+  return true;
 }
 
 // Fim dos dados do sistema
@@ -1374,6 +1382,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
     const messages = response.data.messages;
     
     for (const message of messages){
+      
       if (message.type === 'text') {
         let formattedText = '';
         for (const richText of message.content.richText) {
@@ -1702,6 +1711,11 @@ function startWhatsAppSession(sessionName) {
 
 // Evento de recebimento de mensagens
 client.on('message', async msg => {
+
+  if(existsTheDBSystem() === false){
+    return
+  }
+  
   const typebotKey = await readFluxo(msg.from);
 
   if (!typebotKey) {
@@ -1728,7 +1742,8 @@ client.on('message', async msg => {
       const chat = await msg.getChat();
         const sessionId = await readSessionId(msg.from);
         const content = msg.body;
-        const chaturl = `${url_chat}${sessionId}/continueChat`;        
+        //const chaturl = `${url_chat}${sessionId}/continueChat`;
+        const chaturl = `${readURL(0)}${sessionId}/continueChat`;       
         
         const reqData = {
           message: content,
@@ -1748,7 +1763,8 @@ client.on('message', async msg => {
         try {
           const response = await axios.request(config);
           //console.log(JSON.stringify(response.data));
-          const messages = response.data.messages;    
+          const messages = response.data.messages;
+          //console.log(JSON.stringify(messages));                  
           for (const message of messages){
             if (message.type === 'text') {
               let formattedText = '';
@@ -1800,7 +1816,7 @@ client.on('message', async msg => {
         if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar'))) {
                 let retries = 0;
                 const maxRetries = 15; // Máximo de tentativas
-                let delay = init_delay; // Tempo inicial de espera em milissegundos                    
+                let delay = init_delay; // Tempo inicial de espera em milissegundos                           
             
                 const sendRequest = async () => {
                     await chat.sendStateTyping(); // Simulando Digitação
@@ -2136,12 +2152,49 @@ let system_aux = false;
 
 client.on('message_create', async (msg) => {
 
+  // Comandos do central de controle
+  if (msg.fromMe && msg.body.startsWith('!help') && msg.to === msg.from) {        
+    
+  // Chamar sendRequest ao invés de client.sendMessage
+  await sendRequest(msg.from, `*Sistema de Controle v1.0 - TypeZap*
+
+*Adicionar Novo Fluxo*
+Comando: "!adicionar"
+      
+*Excluir Fluxo*
+Comando: "!excluir"
+      
+*Cadastrar Resposta Rápida*
+Comando: "!rapida"
+      
+*Excluir Resposta Rápida*
+Comando: "!rapidaexcluir"
+      
+*Adicionar Remarketing*
+Comando: "!rmktadicionar"
+      
+*Excluir Remarketing*
+Comando: "!rmktexcluir"
+      
+*Pegar o ID de um grupo*
+Envie ao grupo: "Qual o id?"
+      
+*Excluir grupo*
+Comando: "!grupoexcluir"
+      
+*Criar Lista de Grupo*
+!listagrupo id_grupo listagrupo.json
+      
+*Disparar Mensagens*
+!listadisparo lista.json min_delay max_delay init_pos end_pos nome_fluxo`, "text");    
+} 
+
   // Apenas TypeZap configurado
-  if (msg.fromMe && !existsTheDBSystem() && msg.body !== "!ativar" && msg.to === msg.from && !system_aux) {
+  /*if (msg.fromMe && !existsTheDBSystem() && msg.body !== "!ativar" && readFlowSelf(msg.from) !== 'stepAtivar01' && msg.to === msg.from && !system_aux) {
     await sendRequest(msg.from, `Você precisa registrar a URL principal do seu Typebot antes de usar o sistema. Digite !ativar e forneça a URL`, "text");
     system_aux = true;
     return
-  }
+  }*/
 
   // Configurar Main Infos do Systema
   if (msg.fromMe && msg.body === "!ativar" && !existsTheDBSystem() && msg.to === msg.from) {
@@ -2149,10 +2202,11 @@ client.on('message_create', async (msg) => {
 
 Insira a URL do seu Typebot, por exemplo:
 https://seutypebot.vm.elestio.app/api/v1/sessions/`, "text");
+await delay(1000);
 addObjectSelf(msg.from, 'stepAtivar01', JSON.stringify(msg.id.id), 'done', null, null, null);
   }
 
-  if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepAtivar01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+  if (msg.fromMe && msg.body !== null && msg.to === msg.from && !existsTheDBSystem() && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepAtivar01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
     updateInteractSelf(msg.from, 'typing');
     updateIdSelf(msg.from, JSON.stringify(msg.id.id));
     updateURLRegistro(msg.from, msg.body);
@@ -2162,54 +2216,19 @@ await sendRequest(msg.from, `Typebot preparado! 🚀
 ${readURLRegistro(msg.from)}
 
 *Pode começar a usar o sistema* 🤖`, "text");
+await delay(1000);
     addObjectSystem(await readURLRegistro(msg.from));
     updateFlowSelf(msg.from,'stepAtivar02');
     updateInteractSelf(msg.from, 'done');
     deleteObjectSelf(msg.from);
-  }
-
-  // Comandos do central de controle
-  if (msg.fromMe && msg.body.startsWith('!help') && msg.to === msg.from) {    
-    const mensagemInstrucoes = `*Sistema de Controle v1.0 - TypeZap*
-
-*Adicionar Novo Fluxo*
-Comando: "!adicionar"
-    
-*Excluir Fluxo*
-Comando: "!excluir"
-    
-*Cadastrar Resposta Rápida*
-Comando: "!rapida"
-    
-*Excluir Resposta Rápida*
-Comando: "!rapidaexcluir"
-    
-*Adicionar Remarketing*
-Comando: "!rmktadicionar"
-    
-*Excluir Remarketing*
-Comando: "!rmktexcluir"
-    
-*Pegar o ID de um grupo*
-Envie ao grupo: "Qual o id?"
-    
-*Excluir grupo*
-Comando: "!grupoexcluir"
-    
-*Criar Lista de Grupo*
-!listagrupo id_grupo listagrupo.json
-    
-*Disparar Mensagens*
-!listadisparo lista.json min_delay max_delay init_pos end_pos nome_fluxo`;
-    
-  // Chamar sendRequest ao invés de client.sendMessage
-  await sendRequest(msg.from, mensagemInstrucoes, "text");    
-  } 
+    await delay(500);
+  }  
 
   // Resetar Step Self
   if (msg.fromMe && msg.body === "00" && msg.to === msg.from) {
-    deleteObjectSelf(msg.from);    
+    deleteObjectSelf(msg.from);
     await sendRequest(msg.from, `*Configuração resetada!*`, "text");
+    await delay(1000);
   }
 
   //Adicionar novo fluxo
@@ -2218,13 +2237,16 @@ Comando: "!grupoexcluir"
 Insira o link de registro completo do seu fluxo do Typebot. 📝
     
 Por exemplo:\nhttps://seutype.vm.elestio.app/api/v1/typebots/seufunil/startChat\n 🛍️💬
-        
+
+_Resete o processo a qualquer momento digitando "00"_
 *Insira o link abaixo* ⬇️`, "text");
-     addObjectSelf(msg.from, 'stepAdicionar01', JSON.stringify(msg.id.id), 'done', null, null, null);
+    await delay(1000);
+    addObjectSelf(msg.from, 'stepAdicionar01', JSON.stringify(msg.id.id), 'done', null, null, null);
+   
   }
 
   if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepAdicionar01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
-    updateInteractSelf(msg.from, 'typing');
+   updateInteractSelf(msg.from, 'typing');
     updateIdSelf(msg.from, JSON.stringify(msg.id.id));
     updateURLRegistro(msg.from, msg.body); 
 
@@ -2239,7 +2261,7 @@ Por exemplo:
 QUERO SABER MAIS
 
 *Vamos lá, escreva abaixo* 🤖👥`, "text");
-
+await delay(1000);
     updateFlowSelf(msg.from,'stepAdicionar02');
     updateInteractSelf(msg.from, 'done');
   }
@@ -2260,9 +2282,10 @@ Por exemplo:
 meufluxo
 
 *Bora escolher um nome pro fluxo* 🤖👥`, "text");
-
+await delay(1000);
     updateFlowSelf(msg.from,'stepAdicionar03');
     updateInteractSelf(msg.from, 'done');
+    
   }
 
   if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepAdicionar03' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
@@ -2279,7 +2302,7 @@ ${readName(msg.from)}
 Vou preparar tudo e setar o novo fluxo.
 
 *Preparando...* 🤖`, "text");
-
+await delay(1000);
 const typebotConfig = {
   url_registro: `${await readURLRegistro(msg.from)}`,
   gatilho: `${await readGatilho(msg.from)}`,
@@ -2294,25 +2317,29 @@ const typebotConfig = {
   ${JSON.stringify((listAllFromDB()))}
   
   *Já pode usar o seu bot!* 🤖`, "text");
-
+  await delay(1000);
     updateFlowSelf(msg.from,'stepAdicionar04');
     updateInteractSelf(msg.from, 'done');
     deleteObjectSelf(msg.from);
+    await delay(1000);
   }
 
   //Excluir fluxo
 
   if (msg.fromMe && msg.body === '!excluir' && msg.to === msg.from && !existsDBSelf(msg.from) && !msg.hasMedia) { 
-
+    
 await sendRequest(msg.from, `Certo! 👍
 Insira o nome do fluxo para ser excluido. 📝
-    
-*Escreva o nome abaixo* ⬇️`, "text");
 
+_Resete o processo a qualquer momento digitando "00"_
+*Escreva o nome abaixo* ⬇️`, "text");
+     await delay(1000);
      addObjectSelf(msg.from, 'stepExcluir01', JSON.stringify(msg.id.id), 'done', null, null, null);
+     
   }
 
   if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepExcluir01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+    
     updateInteractSelf(msg.from, 'typing');
     updateIdSelf(msg.from, JSON.stringify(msg.id.id));
     updateName(msg.from, msg.body);
@@ -2322,27 +2349,34 @@ await sendRequest(msg.from, `Buscando fluxo..
 O fluxo que encontrei é:
 
 ${readFromDB(msg.body)}`, "text");
-
+await delay(1000);
     removeFromDB(msg.body);
 
     await sendRequest(msg.from, '*Fluxo excluido com sucesso!* 🤖👥', "text");
+    await delay(1000);
     updateFlowSelf(msg.from,'stepExcluir02');
     updateInteractSelf(msg.from, 'done');
     deleteObjectSelf(msg.from);
+    await delay(1000);
   }
 
   //Cadastrar Resposta Rápida
   if (msg.fromMe && msg.body === '!rapida' && msg.to === msg.from && !existsDBSelf(msg.from) && !msg.hasMedia) { 
+    
     await sendRequest(msg.from, `Entendido! 👍
 Diga o nome do fluxo do Typebot já cadastrado. 📝
 
 Por exemplo:\nmeufluxo\n 🛍️💬
-    
+
+_Resete o processo a qualquer momento digitando "00"_
 *Escreva abaixo* ⬇️`,"text");
+await delay(1000);
      addObjectSelf(msg.from, 'stepRapida01', JSON.stringify(msg.id.id), 'done', null, null, null);
+     
   }
 
   if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepRapida01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+    
     updateInteractSelf(msg.from, 'typing');
     updateIdSelf(msg.from, JSON.stringify(msg.id.id));
     updateName(msg.from, msg.body);
@@ -2353,11 +2387,14 @@ Agora escreva a frase ou palavra chave para disparar o fluxo ao usuário. 🆔
 Por exemplo: "Estou muito feliz por te receber aqui"
 
 *Vamos lá, escreva abaixo* 🤖👥`,"text");
+await delay(1000);
     updateFlowSelf(msg.from,'stepRapida02');
     updateInteractSelf(msg.from, 'done');
+    
   }
 
   if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepRapida02' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+    
     updateInteractSelf(msg.from, 'typing');
     updateIdSelf(msg.from, JSON.stringify(msg.id.id));
     updateGatilho(msg.from, msg.body);
@@ -2369,15 +2406,18 @@ O chave que adicionei é:
 ${readGatilho(msg.from)}
 
 *Estou processando...* 🤖👥`,"text");
+await delay(1000);
      const rapidoConfig = {  
      gatilho: `${await readGatilho(msg.from)}`,
      name: `${await readName(msg.from)}`
      };
     addToDBTypebotV2(await readName(msg.from),rapidoConfig);
     await sendRequest(msg.from, `Tudo pronto, pode disparar o fluxo agora! 🚀`,"text");
+    await delay(1000);
     updateFlowSelf(msg.from,'stepRapida03');
     updateInteractSelf(msg.from, 'done');
     deleteObjectSelf(msg.from);
+    
   } 
 
   //Excluir Resposta Rápida
@@ -2385,12 +2425,15 @@ ${readGatilho(msg.from)}
   if (msg.fromMe && msg.body === '!rapidaexcluir' && msg.to === msg.from && !existsDBSelf(msg.from) && !msg.hasMedia) { 
     await sendRequest(msg.from, `Certo! 👍
 Insira o nome da Resposta Rápida para ser excluida. 📝
-    
+
+_Resete o processo a qualquer momento digitando "00"_
 *Escreva o nome abaixo* ⬇️`,"text");
-     addObjectSelf(msg.from, 'stepRapidaExcluir01', JSON.stringify(msg.id.id), 'done', null, null, null);
+await delay(1000);
+     addObjectSelf(msg.from, 'stepRapidaExcluir01', JSON.stringify(msg.id.id), 'done', null, null, null);     
   }
 
   if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepRapidaExcluir01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+   
     updateInteractSelf(msg.from, 'typing');
     updateIdSelf(msg.from, JSON.stringify(msg.id.id));
     updateName(msg.from, msg.body);
@@ -2398,25 +2441,33 @@ Insira o nome da Resposta Rápida para ser excluida. 📝
     await sendRequest(msg.from, `Buscando Resposta Rápida..
 
 ${readFromDBTypebotV2(msg.body)}`,"text");
+await delay(1000);
     removeFromDBTypebotV2(msg.body);
     await sendRequest(msg.from, '*Resposta Rápida excluida com sucesso!* 🤖👥',"text");
+    await delay(1000);
     updateFlowSelf(msg.from,'stepRapidaExcluir02');
     updateInteractSelf(msg.from, 'done');
     deleteObjectSelf(msg.from);
+    
   }
 
   //Adicionar Remarketing
   if (msg.fromMe && msg.body === '!rmktadicionar' && msg.to === msg.from && !existsDBSelf(msg.from) && !msg.hasMedia) { 
+    
     await sendRequest(msg.from, `Entendido! 👍
 Insira o link de registro completo do seu fluxo do Typebot para fazer dele um Remarketing. 📝
 
 Por exemplo:\nhttps://seutype.vm.elestio.app/api/v1/typebots/funilremarketing/startChat\n 🛍️💬
-    
+
+_Resete o processo a qualquer momento digitando "00"_
 *Insira o link abaixo* ⬇️`,"text");
+await delay(1000);
      addObjectSelf(msg.from, 'stepRmkt01', JSON.stringify(msg.id.id), 'done', null, null, null);
+     
   }
 
   if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepRmkt01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+    
     updateInteractSelf(msg.from, 'typing');
     updateIdSelf(msg.from, JSON.stringify(msg.id.id));
     updateURLRegistro(msg.from, msg.body);
@@ -2430,11 +2481,14 @@ ${readURLRegistro(msg.from)}
 Por favor, agora escreva o nome do fluxo principal (já existente) que irá se associar ao Remarketing. 🆔
 
 *Bora associar ao fluxo principal* 🤖👥`,"text");
+await delay(1000);
     updateFlowSelf(msg.from,'stepRmkt02');
     updateInteractSelf(msg.from, 'done');
+    
   }
 
   if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepRmkt02' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+    await delay(1000);
     updateInteractSelf(msg.from, 'typing');
     updateIdSelf(msg.from, JSON.stringify(msg.id.id));
     updateName(msg.from, msg.body);
@@ -2448,8 +2502,10 @@ ${readName(msg.from)}
 Agora forneça o tempo (em dias) para o Remarketing ser disparado.
 
 *Escreva algo como 1 ou 5, por exemplo* 🤖`,"text");
+await delay(1000);
     updateFlowSelf(msg.from,'stepRmkt03');
     updateInteractSelf(msg.from, 'done');
+    await delay(1000);
   }
 
   if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepRmkt03' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
@@ -2466,7 +2522,7 @@ ${readGatilho(msg.from)} dias
 Vou preparar tudo e setar o novo Remarketing.
 
 *Preparando...* 🤖`,"text");
-
+await delay(1000);
     const urlRmkt = `${readURLRegistro(msg.from)}`;
     const typebotConfig = {
     disparo: `${await readGatilho(msg.from)}`,
@@ -2477,7 +2533,7 @@ Vou preparar tudo e setar o novo Remarketing.
     await sendRequest(msg.from, `Concluido! 🚀
 
 *Remarketing Registrado* 🤖`,"text");
-
+await delay(1000);
     updateFlowSelf(msg.from,'stepRmkt04');
     updateInteractSelf(msg.from, 'done');
     deleteObjectSelf(msg.from);
@@ -2485,47 +2541,63 @@ Vou preparar tudo e setar o novo Remarketing.
 
   //Excluir Remarketing
   if (msg.fromMe && msg.body === '!rmktexcluir' && msg.to === msg.from && !existsDBSelf(msg.from) && !msg.hasMedia) { 
+    
     await sendRequest(msg.from, `Certo! 👍
 Insira o URL do fluxo de Remarketing que iremos excluir. 📝
-    
+
+_Resete o processo a qualquer momento digitando "00"_
 *Escreva o URL abaixo* ⬇️`,"text");
+await delay(1000);
      addObjectSelf(msg.from, 'stepExcluirRmkt01', JSON.stringify(msg.id.id), 'done', null, null, null);
+     
   }
 
   if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepExcluirRmkt01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+    
     updateInteractSelf(msg.from, 'typing');
     updateIdSelf(msg.from, JSON.stringify(msg.id.id));
     updateURLRegistro(msg.from, msg.body);
         
     await sendRequest(msg.from, `Buscando fluxo de Remarketing..`,"text");
+    await delay(1000);
     removeFromDBTypebotV3(msg.body);
     removeFromDBTypebotV4withURL(msg.body);
     await sendRequest(msg.from, '*Fluxo de Remarketing excluido com sucesso!* 🤖👥',"text");
+    await delay(1000);
     updateFlowSelf(msg.from,'stepExcluirRmkt02');
     updateInteractSelf(msg.from, 'done');
     deleteObjectSelf(msg.from);
+    await delay(1000);
   }  
 
   //Excluir Grupo
   if (msg.fromMe && msg.body === '!grupoexcluir' && msg.to === msg.from && !existsDBSelf(msg.from) && !msg.hasMedia) { 
+    
     await sendRequest(msg.from, `Certo! 👍
 Insira o ID do grupo que iremos excluir. 📝
-    
+
+_Resete o processo a qualquer momento digitando "00"_    
 *Escreva o ID abaixo* ⬇️`,"text");
+await delay(1000);
      addObjectSelf(msg.from, 'stepExcluirGrupo01', JSON.stringify(msg.id.id), 'done', null, null, null);
+     
   }
 
   if (msg.fromMe && msg.body !== null && msg.to === msg.from && existsDBSelf(msg.from) && readFlowSelf(msg.from) === 'stepExcluirGrupo01' && readIdSelf(msg.from) !== JSON.stringify(msg.id.id) && readInteractSelf(msg.from) === 'done' && !msg.hasMedia) {
+    
     updateInteractSelf(msg.from, 'typing');
     updateIdSelf(msg.from, JSON.stringify(msg.id.id));
     updateURLRegistro(msg.from, msg.body);
         
     await sendRequest(msg.from, `Buscando Grupos..`,"text");
+    await delay(1000);
     removeFromDBTypebotV5(msg.body);
     await sendRequest(msg.from, '*Grupo excluido com sucesso!* 🤖👥',"text");
+    await delay(1000);
     updateFlowSelf(msg.from,'stepExcluirGrupo02');
     updateInteractSelf(msg.from, 'done');
     deleteObjectSelf(msg.from);
+    
   }
 
   // Rotina de disparo

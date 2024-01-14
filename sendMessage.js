@@ -13,7 +13,9 @@ const server = http.createServer(app);
 const port = 3000;
 
 app.use(express.static('.'));
-app.use(bodyParser.json());
+//app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // Configurações para o primeiro cliente (Windows)
 const client = new Client({
