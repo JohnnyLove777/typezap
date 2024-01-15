@@ -559,6 +559,8 @@ function writeJSONFileTypebotV2(filename, data) {
     fs.writeFileSync(filename, JSON.stringify(data, null, 2));
 }
 
+let reinit = false;
+
 async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
   
   const reqData = JSON.stringify({
@@ -635,6 +637,7 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         if (formattedText.startsWith('!reiniciar')) {
           if (existsDB(datafrom)) {
             deleteObject(datafrom);
+            reinit = true;
           }
         }
         if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar'))) {
@@ -873,8 +876,11 @@ async function createSessionJohnnyV2(data, datafrom, url_registro, fluxo) {
         processGroupMessages(datafrom, isFirstRun = true);
     }
   }
-    if (!existsDB(datafrom)) {
+    if (!existsDB(datafrom) && reinit === false) {
       addObject(datafrom, response.data.sessionId, datafrom.replace(/\D/g, ''), JSON.stringify(data.id.id), 'done', fluxo, false, "active", 400);
+    }
+    if(reinit === true){
+      reinit = false;
     }
   } catch (error) {
     console.log(error);
@@ -1423,6 +1429,7 @@ async function createSessionJohnny(data, url_registro, fluxo) {
         if (formattedText.startsWith('!reiniciar')) {
           if (existsDB(data.from)) {
             deleteObject(data.from);
+            reinit = true;
           }
         }
         if (!(formattedText.startsWith('!wait')) && !(formattedText.startsWith('!fim')) && !(formattedText.startsWith('!optout')) && !(formattedText.startsWith('!reiniciar'))) {
@@ -1616,8 +1623,11 @@ async function createSessionJohnny(data, url_registro, fluxo) {
         }
       } 
     }
-    if (!existsDB(data.from)) {
+    if (!existsDB(data.from) && reinit === false) {
       addObject(data.from, response.data.sessionId, data.from.replace(/\D/g, ''), JSON.stringify(data.id.id), 'done', fluxo, false, "active", 400);
+    }
+    if(reinit === true){
+      reinit = false;
     }
   } catch (error) {
     console.log(error);
