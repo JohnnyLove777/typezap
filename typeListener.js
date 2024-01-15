@@ -37,15 +37,15 @@ console.log("Bem-vindo ao TypeZap 1.0 - A Integração mais completa Typebot + W
 console.log(`Nome da sessão: ${sessao}`);
 
 // Configurações para o primeiro cliente (Windows)
-const client = new Client({
+/*const client = new Client({
     authStrategy: new LocalAuth({ clientId: sessao }),
     puppeteer: {
       executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
     }
-  });
+  });*/
   
   //Kit com os comandos otimizados para nuvem Ubuntu Linux (créditos Pedrinho da Nasa Comunidade ZDG)
-  /*const client = new Client({
+  const client = new Client({
     authStrategy: new LocalAuth({ clientId: sessao }),
     puppeteer: {
       headless: true,
@@ -69,7 +69,7 @@ const client = new Client({
         '--disable-gpu'
       ]
     }
-  });*/
+  });
   
 // entao habilitamos o usuario a acessar o serviço de leitura do qr code
 client.on('qr', qr => {

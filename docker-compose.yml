@@ -16,20 +16,22 @@ services:
     restart: always
     depends_on:
       - typebot-db
-    environment:
+    environment: 
       - DATABASE_URL=postgresql://postgres:typebot@typebot-db:5432/typebot
-      - NEXTAUTH_URL=http://<seu ip aqui>:3001
-      - NEXT_PUBLIC_VIEWER_URL=http://<seu ip aqui>:3002
+      - NEXTAUTH_URL=http://<coloque aqui o IP da sua VPS>:3001
+      - NEXT_PUBLIC_VIEWER_URL=http://<coloque aqui o IP da sua VPS>:3002
       - ENCRYPTION_SECRET=875c916244442f7d89a8f376d9d33cac
-      - ADMIN_EMAIL=email@gmail.com
+      - ADMIN_EMAIL=<coloque aqui o seu Gmail>
       - SMTP_HOST=smtp.gmail.com
-      - SMTP_USERNAME=email@gmail.com
-      - SMTP_PASSWORD=senha
-      - NEXT_PUBLIC_SMTP_FROM='Suporte Typebot' <email@gmail.com>
+      - SMTP_PORT=465
+      - SMTP_USERNAME=<coloque aqui o seu Gmail>
+      - SMTP_PASSWORD=<coloque aqui a senha do seu Gmail (senha do App)>
+      - SMTP_SECURE=true
+      - NEXT_PUBLIC_SMTP_FROM='Suporte Typebot' <<coloque aqui o seu Gmail>>
       - S3_ACCESS_KEY=minio
       - S3_SECRET_KEY=minio123
       - S3_BUCKET=typebot
-      - S3_ENDPOINT=http://<seu ip aqui>:9000
+      - S3_ENDPOINT=http://<coloque aqui o IP da sua VPS>:9000
 
   typebot-viewer:
     ports:
@@ -38,13 +40,13 @@ services:
     restart: always
     environment:
       - DATABASE_URL=postgresql://postgres:typebot@typebot-db:5432/typebot
-      - NEXT_PUBLIC_VIEWER_URL=http://<seu ip aqui>:3002
-      - NEXTAUTH_URL=http://<seu ip aqui>:3001
+      - NEXT_PUBLIC_VIEWER_URL=http://<coloque aqui o IP da sua VPS>:3002
+      - NEXTAUTH_URL=http://<coloque aqui o IP da sua VPS>:3001
       - ENCRYPTION_SECRET=875c916244442f7d89a8f376d9d33cac
       - S3_ACCESS_KEY=minio
       - S3_SECRET_KEY=minio123
       - S3_BUCKET=typebot
-      - S3_ENDPOINT=http://<seu ip aqui>:9000
+      - S3_ENDPOINT=http://<coloque aqui o IP da sua VPS>:9000
 
   mail:
     image: bytemark/smtp
