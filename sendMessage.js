@@ -5,6 +5,9 @@ const express = require('express');
 const { Client, Buttons, List, MessageMedia, LocalAuth } = require('whatsapp-web.js');
 require('dotenv').config();
 
+// Gere o seu token 32 caracteres
+const SECURITY_TOKEN = "a9387747d4069f22fca5903858cdda24";
+
 const sessao = "sendMessage";
 
 const app = express();
@@ -63,7 +66,18 @@ client.on('ready', () => {
 });
 
 app.post('/sendMessage', async (req, res) => {
-    const { destinatario, mensagem, tipo, msg, media } = req.body;
+    const { destinatario, mensagem, tipo, msg, media, token } = req.body;
+
+    // Obter o endereço IP do cliente que faz a requisição
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+    // Verifique se o pedido não vem do localhost
+    if (clientIp !== '127.0.0.1' && clientIp !== '::1') {
+        // Verificar se o token é válido
+        if (token !== SECURITY_TOKEN) {
+            return res.status(401).json({ status: 'falha', mensagem: 'Token inválido' });
+        }
+    }
 
     if (!client || !client.info) {
         return res.status(402).json({status: 'falha', message: 'Cliente Não Autenticado'});
